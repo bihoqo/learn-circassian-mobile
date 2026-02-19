@@ -3,7 +3,7 @@
     "name": "Learn Circassian Mobile",
     "slug": "learn-circassian-mobile",
     "scheme": "learncircassian",
-    "version": "1.0.0",
+    "version": "1.1.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",

@@ -95,7 +95,7 @@ export default function WordScreen() {
           contentContainerStyle={styles.scroll}
           keyboardShouldPersistTaps="handled"
         >
-          <Text style={[styles.wordTitle, { color: colors.text }]}>
+          <Text selectable style={[styles.wordTitle, { color: colors.text }]}>
             {displayWord}
           </Text>
           <Text style={[styles.entryCount, { color: colors.textMuted }]}>

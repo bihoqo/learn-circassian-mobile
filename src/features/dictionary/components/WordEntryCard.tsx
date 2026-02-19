@@ -39,6 +39,7 @@ export function WordEntryCard({
       >
         <View style={styles.headerContent}>
           <Text
+            selectable
             style={[styles.dictTitle, { color: colors.text }]}
             numberOfLines={2}
           >
@@ -72,6 +73,7 @@ export function WordEntryCard({
               font: { color: colors.text },
               p: { marginVertical: 4 },
             }}
+            defaultTextProps={{ selectable: true }}
             enableExperimentalBRCollapsing
           />
         </View>
