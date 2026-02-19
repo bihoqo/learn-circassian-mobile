@@ -36,7 +36,8 @@ An offline React Native / Expo app for learning the Circassian language. The pri
 ```
 app/
   _layout.tsx           # Root: DB download/check flow, SQLiteProvider, QueryClientProvider
-  index.tsx             # Search screen
+  index.tsx             # Search screen (gear icon → settings, theme toggle)
+  settings.tsx          # Settings screen (DB path/URL, remove instructions, version)
   word/[word].tsx        # Word detail screen
 assets/
   dictionary.db         # Optional local DB copy (gitignored)
@@ -61,9 +62,27 @@ src/
 
 `app/_layout.tsx` orchestrates first-run setup:
 1. Checks if `FileSystem.documentDirectory/SQLite/dictionary.db` exists
-2. If not → shows `SetupScreen` with a download button
+2. If not → shows `SetupScreen` with a download button + manual install instructions (DB URL and path)
 3. Download uses `FileSystem.createDownloadResumable` with progress callback
 4. On success → renders `SQLiteProvider` → `AppNavigator`
+
+## DB Detection (3 checkpoints)
+
+The app checks whether the DB exists at three points, redirecting to `SetupScreen` if missing:
+1. **App entry** — `_layout.tsx` `useEffect` calls `FileSystem.getInfoAsync(DB_PATH)`
+2. **Search failure** — `QueryCache({ onError })` checks DB existence and calls `needsSetupRef.current()`
+3. **Exit Settings** — `handleBack()` in `settings.tsx` calls `FileSystem.getInfoAsync(DB_PATH)` before navigating back
+
+`needsSetupRef` is a module-level `{ current: () => {} }` ref exported from `_layout.tsx`, updated by `RootLayout` via `useEffect` to point at `setDbState("needs_setup")`.
+
+## Releases (APK)
+
+- Build: `eas build --platform android --profile preview --non-interactive`
+- Uses `credentials.json` (gitignored) with local keystore for signing on Expo's servers
+- **Before each release, bump `version` in `app.json`** (e.g. `"1.0.0"` → `"1.1.0"`)
+  - The Settings screen reads this via `Constants.expoConfig?.version`
+- Upload the `.apk` from the EAS build URL to the GitHub Release as an asset
+- `credentials.json`, `android-release.keystore`, and `android/app/debug.keystore` must NEVER be committed (all in `.gitignore`)
 
 ## Testing
 
