@@ -10,29 +10,44 @@ import {
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SQLiteProvider } from "expo-sqlite";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClient, QueryClientProvider, QueryCache } from "@tanstack/react-query";
 import * as SplashScreen from "expo-splash-screen";
 import * as FileSystem from "expo-file-system/legacy";
 import { useTheme } from "@/lib/useTheme";
 
 SplashScreen.preventAutoHideAsync();
 
+// ─── DB paths & URL ───────────────────────────────────────────────────────────
+
+export const DB_DIR = `${FileSystem.documentDirectory}SQLite/`;
+export const DB_PATH = `${DB_DIR}dictionary.db`;
+
+export const DB_URL =
+  "https://github.com/bihoqo/learn-circassian-dictionary-collection/releases/latest/download/dictionary.db";
+
+// ─── Module-level ref so QueryCache onError can redirect to setup ─────────────
+
+export const needsSetupRef = { current: () => {} };
+
+// ─── QueryClient with global error → DB-missing detection ────────────────────
+
 const queryClient = new QueryClient({
+  queryCache: new QueryCache({
+    onError: () => {
+      FileSystem.getInfoAsync(DB_PATH)
+        .then((info) => {
+          if (!info.exists) needsSetupRef.current();
+        })
+        .catch(() => needsSetupRef.current());
+    },
+  }),
   defaultOptions: {
     queries: {
-      retry: 1,
+      retry: 0,
       staleTime: Infinity,
     },
   },
 });
-
-// ─── paths ────────────────────────────────────────────────────────────────────
-
-const DB_DIR = `${FileSystem.documentDirectory}SQLite/`;
-const DB_PATH = `${DB_DIR}dictionary.db`;
-
-const DB_URL =
-  "https://github.com/bihoqo/learn-circassian-dictionary-collection/releases/latest/download/dictionary.db";
 
 // ─── download ─────────────────────────────────────────────────────────────────
 
@@ -62,7 +77,6 @@ async function downloadDatabase(
     await FileSystem.deleteAsync(tmpPath, { idempotent: true });
     throw new Error("Download did not complete.");
   }
-  // Rename .tmp → final
   await FileSystem.moveAsync({ from: tmpPath, to: DB_PATH });
 }
 
@@ -128,6 +142,31 @@ function SetupScreen({ onDone }: { onDone: () => void }) {
           </Text>
         </TouchableOpacity>
       )}
+
+      {/* Manual / info section */}
+      <View style={styles.infoSection}>
+        <Text style={styles.infoSectionTitle}>Or install manually</Text>
+        <View style={styles.infoStep}>
+          <Text style={styles.infoStepNum}>1</Text>
+          <Text style={styles.infoStepText}>
+            Download{" "}
+            <Text style={styles.infoLink}>dictionary.db</Text>
+            {" "}from:
+          </Text>
+        </View>
+        <Text style={styles.infoCode} selectable>{DB_URL}</Text>
+        <View style={styles.infoStep}>
+          <Text style={styles.infoStepNum}>2</Text>
+          <Text style={styles.infoStepText}>
+            Place it at the following path using ADB or a file manager with root access:
+          </Text>
+        </View>
+        <Text style={styles.infoCode} selectable>{DB_PATH}</Text>
+        <View style={styles.infoStep}>
+          <Text style={styles.infoStepNum}>3</Text>
+          <Text style={styles.infoStepText}>Restart the app — it will open automatically.</Text>
+        </View>
+      </View>
     </View>
   );
 }
@@ -152,6 +191,7 @@ function AppNavigator() {
           name="word/[word]"
           options={{ title: "Definition", headerBackTitle: "Search" }}
         />
+        <Stack.Screen name="settings" options={{ headerShown: false }} />
       </Stack>
     </>
   );
@@ -166,12 +206,21 @@ function DbLoadingFallback() {
   );
 }
 
-// ─── Root layout ─────────────────────────────────────────────────────────────
+// ─── Root layout ──────────────────────────────────────────────────────────────
 
 type DbState = "checking" | "needs_setup" | "ready";
 
 export default function RootLayout() {
   const [dbState, setDbState] = useState<DbState>("checking");
+
+  // Keep needsSetupRef pointing at our setter so QueryCache.onError and
+  // the settings screen can both trigger a redirect to setup.
+  useEffect(() => {
+    needsSetupRef.current = () => setDbState("needs_setup");
+    return () => {
+      needsSetupRef.current = () => {};
+    };
+  }, []);
 
   useEffect(() => {
     FileSystem.getInfoAsync(DB_PATH)
@@ -199,7 +248,6 @@ export default function RootLayout() {
     );
   }
 
-  // DB is ready — open it (no assetSource: we placed the file ourselves)
   return (
     <QueryClientProvider client={queryClient}>
       <React.Suspense fallback={<DbLoadingFallback />}>
@@ -300,5 +348,60 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#ffffff",
+  },
+
+  // Manual install / info section
+  infoSection: {
+    width: "100%",
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: "#27272a",
+    paddingTop: 16,
+    gap: 8,
+  },
+  infoSectionTitle: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#52525b",
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    textAlign: "center",
+    marginBottom: 4,
+  },
+  infoStep: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  infoStepNum: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: "#27272a",
+    color: "#a1a1aa",
+    fontSize: 11,
+    fontWeight: "700",
+    textAlign: "center",
+    lineHeight: 20,
+    flexShrink: 0,
+  },
+  infoStepText: {
+    flex: 1,
+    fontSize: 13,
+    color: "#71717a",
+    lineHeight: 19,
+  },
+  infoLink: {
+    color: "#067d35",
+  },
+  infoCode: {
+    fontSize: 11,
+    color: "#a1a1aa",
+    backgroundColor: "#1c1c1e",
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    fontFamily: "monospace",
+    marginLeft: 30,
   },
 });

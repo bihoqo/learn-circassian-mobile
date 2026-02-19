@@ -9,6 +9,7 @@ import {
   Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { router, type Href } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { useDictionarySearch } from "@/features/dictionary/hooks/useDictionarySearch";
 import { useThemeStore } from "@/shared/store/useThemeStore";
@@ -47,16 +48,24 @@ export default function SearchScreen() {
               Circassian Dictionary
             </Text>
           </View>
-          <TouchableOpacity
-            onPress={toggleTheme}
-            style={[styles.iconBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
-          >
-            <Ionicons
-              name={isDark ? "sunny-outline" : "moon-outline"}
-              size={17}
-              color={colors.textSecondary}
-            />
-          </TouchableOpacity>
+          <View style={styles.headerButtons}>
+            <TouchableOpacity
+              onPress={() => router.push("/settings" as Href)}
+              style={[styles.iconBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+            >
+              <Ionicons name="settings-outline" size={17} color={colors.textSecondary} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={toggleTheme}
+              style={[styles.iconBtn, { backgroundColor: colors.bgCard, borderColor: colors.border }]}
+            >
+              <Ionicons
+                name={isDark ? "sunny-outline" : "moon-outline"}
+                size={17}
+                color={colors.textSecondary}
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Search input */}
@@ -106,6 +115,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   title: { fontSize: 17, fontWeight: "800", letterSpacing: -0.3 },
+  headerButtons: {
+    flexDirection: "row",
+    gap: 8,
+  },
   iconBtn: {
     width: 36,
     height: 36,
