@@ -11,6 +11,15 @@
       },
       "distribution": "internal"
     },
+    "preview-updates": {
+      "channel": "preview",
+      "android": {
+        "buildType": "apk",
+        "credentialsSource": "local",
+        "gradleCommand": ":app:assembleRelease -PreactNativeArchitectures=arm64-v8a"
+      },
+      "distribution": "internal"
+    },
     "production": {
       "android": {
         "buildType": "app-bundle"

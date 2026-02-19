@@ -4,6 +4,12 @@
     "slug": "learn-circassian-mobile",
     "scheme": "learncircassian",
     "version": "1.1.0",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/4a5c856a-a30e-4623-b134-21d3cb76f3ae"
+    },
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
@@ -26,6 +32,7 @@
       "package": "com.learncircassian.mobile"
     },
     "plugins": [
+      "expo-updates",
       "expo-router",
       [
         "expo-sqlite",

@@ -77,12 +77,35 @@ The app checks whether the DB exists at three points, redirecting to `SetupScree
 
 ## Releases (APK)
 
-- Build: `eas build --platform android --profile preview --non-interactive`
-- Uses `credentials.json` (gitignored) with local keystore for signing on Expo's servers
-- **Before each release, bump `version` in `app.json`** (e.g. `"1.0.0"` → `"1.1.0"`)
-  - The Settings screen reads this via `Constants.expoConfig?.version`
-- Upload the `.apk` from the EAS build URL to the GitHub Release as an asset
-- `credentials.json`, `android-release.keystore`, and `android/app/debug.keystore` must NEVER be committed (all in `.gitignore`)
+Two APK variants are published per release:
+
+| Variant | EAS profile | Filename | OTA updates |
+|---------|-------------|----------|-------------|
+| Standalone | `preview` | `Learn-Circassian-Mobile-X.X.X.apk` | No |
+| Auto-Update | `preview-updates` | `Learn-Circassian-Mobile-X.X.X-AutoUpdate.apk` | Yes (JS-only) |
+
+### Release workflow
+
+1. **Bump `version` in `app.json`** (e.g. `"1.1.0"` → `"1.2.0"`) — Settings screen reads this via `Constants.expoConfig?.version`
+2. Commit + push all changes
+3. Build standalone: `~/.npm-global/bin/eas build --platform android --profile preview --non-interactive`
+4. Build auto-update: `~/.npm-global/bin/eas build --platform android --profile preview-updates --non-interactive`
+5. Download both APKs from the EAS build URLs
+6. Delete old APK assets from GitHub latest release: `gh release delete-asset latest <old-filename> --repo bihoqo/learn-circassian-mobile`
+7. Upload both APKs: `gh release upload latest <file> --repo bihoqo/learn-circassian-mobile --clobber`
+
+### OTA update (JS-only, no rebuild needed)
+
+```bash
+~/.npm-global/bin/eas update --branch preview --message "Description of change"
+```
+
+All devices running the Auto-Update APK receive the update on next launch. OTA **cannot** update native code — new native modules or permissions require a full APK rebuild.
+
+### Credentials
+
+- `credentials.json`, `android-release.keystore`, `android/app/debug.keystore` must NEVER be committed (all in `.gitignore`)
+- EAS uses `credentialsSource: "local"` — credentials.json is read server-side during cloud build
 
 ## Testing
 
@@ -94,6 +117,7 @@ Bun's built-in test runner. Run: `npm test` (or `bun test`). Test files in `__te
 |---------|-------------|
 | `npm start` | Expo dev server |
 | `npm run android` | Open in Android emulator |
-| `npm run build:android` | EAS cloud APK build |
+| `npm run build:android` | EAS cloud APK build (standalone) |
+| `npm run build:android-updates` | EAS cloud APK build (auto-update) |
 | `npm run db:download` | Download DB to assets/ for local inspection |
 | `npm test` | Run unit tests |

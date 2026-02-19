@@ -2,7 +2,7 @@
 
 An offline Android dictionary for the Circassian languages (West Circassian and East Circassian). Search across 35+ bilingual dictionaries entirely on-device — no internet connection required after the first-run download.
 
-Built with **Expo SDK 54**, **React Native 0.81**, **expo-sqlite v16**, and **Zustand 5**.
+Built with **Expo SDK 54**, **React Native 0.81**, **expo-sqlite v16**, **expo-updates**, and **Zustand 5**.
 
 ---
 
@@ -16,6 +16,7 @@ Built with **Expo SDK 54**, **React Native 0.81**, **expo-sqlite v16**, and **Zu
 - **Language filters** — filter entries by source language (From) and target language (To)
 - **Dark / light mode** — toggle in the header, persisted across restarts via AsyncStorage
 - **Palochka support** — the Circassian palochka (Ӏ) is handled correctly throughout
+- **OTA updates** — the Auto-Update APK variant receives JavaScript updates automatically via Expo EAS Update
 
 ---
 
@@ -80,6 +81,26 @@ Re-running is a no-op if the file already exists.
 
 ---
 
+## APK Variants
+
+Two APK variants are published with each release:
+
+| Variant | Filename | Auto-updates |
+|---------|----------|-------------|
+| **Standalone** | `Learn-Circassian-Mobile-X.X.X.apk` | No — install a new APK for updates |
+| **Auto-Update** | `Learn-Circassian-Mobile-X.X.X-AutoUpdate.apk` | Yes — receives JS-only updates automatically via Expo EAS Update |
+
+**Which should I install?**
+
+- Use **Standalone** if you prefer full control over when updates happen, or if you want to stay on a fixed version.
+- Use **Auto-Update** if you want to receive bug fixes and UI improvements automatically without reinstalling.
+
+**What OTA updates can and cannot do:**
+
+OTA (over-the-air) updates via Expo EAS Update can push **JavaScript changes** (UI, search logic, layout, bug fixes) automatically. They **cannot** update native code (new Android permissions, new native modules, SQLite changes). Native changes always require a new APK.
+
+---
+
 ## Building an APK
 
 ### Option A — EAS Build (cloud, recommended)
@@ -91,10 +112,15 @@ npm install -g eas-cli
 # Log in to your Expo account (create one at https://expo.dev if needed)
 eas login
 
-# Build a preview APK (sideloadable on any Android device)
+# Build the standalone APK (no auto-updates)
 eas build --platform android --profile preview
 # or:
 npm run build:android
+
+# Build the auto-update APK (receives OTA JS updates)
+eas build --platform android --profile preview-updates
+# or:
+npm run build:android-updates
 ```
 
 When the build finishes, EAS prints a download URL for the `.apk`. Install it on any Android device.
@@ -105,11 +131,29 @@ When the build finishes, EAS prints a download URL for the `.apk`. Install it on
 {
   "cli": { "version": ">= 14.0.0" },
   "build": {
-    "preview": { "android": { "buildType": "apk" } },
+    "preview": {
+      "android": { "buildType": "apk" },
+      "distribution": "internal"
+    },
+    "preview-updates": {
+      "channel": "preview",
+      "android": { "buildType": "apk" },
+      "distribution": "internal"
+    },
     "production": { "android": { "buildType": "app-bundle" } }
   }
 }
 ```
+
+### Pushing an OTA update
+
+After building an `preview-updates` APK, you can push JS-only updates without rebuilding:
+
+```bash
+eas update --branch preview --message "Fix search results layout"
+```
+
+All devices running the Auto-Update APK will receive the update on next app launch.
 
 ### Option B — Local Build (requires Android Studio + JDK 17+)
 
@@ -127,6 +171,7 @@ learn-circassian-mobile/
 ├── app/
 │   ├── _layout.tsx            # Root: DB download/check, SQLiteProvider, QueryClientProvider
 │   ├── index.tsx              # Search screen
+│   ├── settings.tsx           # Settings screen (DB info, remove instructions, version)
 │   └── word/
 │       └── [word].tsx         # Word detail screen
 ├── assets/
@@ -146,9 +191,10 @@ learn-circassian-mobile/
 │   │   └── utils.ts           # normalizeQuery, escapeLike, decodeHtmlEntities
 │   └── shared/store/
 │       └── useThemeStore.ts   # Zustand: dark/light, persisted via AsyncStorage
-├── app.json                   # Expo config
+├── app.json                   # Expo config (version, runtimeVersion, updates URL)
+├── eas.json                   # EAS build profiles (preview, preview-updates, production)
 ├── babel.config.js            # babel-preset-expo + module-resolver (@/ → src/)
-├── metro.config.js            # Metro config (default, no extra extensions needed)
+├── metro.config.js            # Metro config (default)
 ├── tsconfig.json              # TypeScript strict, @/ path alias → src/
 └── package.json
 ```
@@ -192,7 +238,8 @@ The Circassian palochka (Ӏ, U+04C0) is stored as `1` in the database:
 |---------|-------------|
 | `npm start` | Start Expo development server |
 | `npm run android` | Open in Android emulator |
-| `npm run build:android` | Build APK via EAS |
+| `npm run build:android` | Build standalone APK via EAS |
+| `npm run build:android-updates` | Build auto-update APK via EAS |
 | `npm run db:download` | Download DB to `assets/dictionary.db` for local inspection |
 | `npm test` | Run unit tests (Bun test runner) |
 
